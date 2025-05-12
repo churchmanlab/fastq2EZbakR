@@ -67,6 +67,12 @@ annotation: data/annotation/genome.gtf
     # 1) star
     # 2) hisat2
 aligner: "star"
+# Modify output .bam to remove read sets? (e.g. mito reads, PolIII, etc) # Added in _MTC version
+  # Options are:
+    # 1) yes
+    # 2) no
+modify_bam: "no"
+path_to_removal_bed: data/annotation/removal.bed
 
 
 # Path to directory containing indices
@@ -92,6 +98,15 @@ indices: data/indices/star_index
   # Used by featureCounts, though terminology comes from HTSeq
 strandedness: "reverse"
 
+# "SNP" calling # Added in _MTC
+  #  bcftools call only keeps sites where bcftools determines a variant based on genotype likelihoods. If you want every site where at least n reads have a mismatch, you need a more lenient approach
+  # Instead of relying on bcftools call, which applies a genotype-calling model, you can directly extract sites where at least one read shows a mismatch using mpileup and a depth-based filter.
+  # Options are:
+    # 1) genome_likelihoods
+    # 2) counts_in_control
+  # snp_counts is the minimum number of mismatches in the control for the position to be marked as a snp
+snp_strategy: "counts_in_control"
+snp_threshold: 3
 
 # Features to assign reads to
   # genes = anywhere in an annotated gene body
@@ -140,6 +155,10 @@ spikename: "\"\""
 # Skip adapter trimming? 
   # If True, will skip fastp step
 skip_trimming: False
+# Should we do hard clipping of ends that happens after adapter trimming? # Added in _MTC
+  # Note this only works for paired end so far
+  # fastp parameters for this need to be set below
+do_hardclipping: True
 
 
 # Path to flattened annotation 
@@ -165,10 +184,6 @@ lowRAM: False
 # Track site-specific mutational content?
   # Not currently compatible with lowRAM = True
 mutpos: False
-
-
-# Make colored sequencing tracks?
-make_tracks: True
 
 
 # Use RSEM to quantify transcript isoform abundances?
@@ -244,6 +259,9 @@ fastp_adapters: ""
 
 # Optional parameters to set for fastp
 fastp_parameters: "" 
+# Optional parameters to set for hard-clipping, which is the second fastp run # Added in _MTC version
+# For example: --trim_tail1 6 --trim_front1 3 --trim_front2 6 --trim_tail2 3 -A
+fastp_hardclip_parameters: "" 
 
 
 ##### FASTQC PARAMETERS #####
