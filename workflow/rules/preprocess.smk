@@ -1,31 +1,89 @@
 ## Trim adapters
 if config["PE"]:
 
-    # Trim with fastp
-    rule fastp:
-        input:
-            sample=get_input_fastqs,
-        output:
-            trimmed=temp(
-                [
-                    "results/trimmed/{sample}.1.fastq",
-                    "results/trimmed/{sample}.2.fastq",
-                ]
-            ),
-            # Unpaired reads separately
-            unpaired1=temp("results/trimmed/{sample}.u1.fastq"),
-            unpaired2=temp("results/trimmed/{sample}.u2.fastq"),
-            failed=temp("results/trimmed/{sample}.failed.fastq"),
-            html="results/reports/{sample}.html",
-            json="results/reports/{sample}.json",
-        log:
-            "logs/fastp/{sample}.log",
-        params:
-            adapters=config["fastp_adapters"],
-            extra=config["fastp_parameters"],
-        threads: 8
-        wrapper:
-            "v2.2.1/bio/fastp"
+    if config["do_hardclipping"]:
+        # Trim with fastp
+        rule fastp:
+            input:
+                sample=get_input_fastqs,
+            output:
+                trimmed=temp([
+                        "results/trimnoclip/{sample}.1.fastq",
+                        "results/trimnoclip/{sample}.2.fastq",
+                    ]
+                ),
+                # Unpaired reads separately
+                unpaired1=temp("results/trimnoclip/{sample}.u1.fastq"),
+                unpaired2=temp("results/trimnoclip/noclip/{sample}.u2.fastq"),
+                failed=temp("results/trimnoclip/noclip/{sample}.failed.fastq"),
+                html="results/reports/noclip/{sample}.html",
+                json="results/reports/noclip/{sample}.json",
+            log:
+                "logs/fastp/noclip/{sample}.log",
+            params:
+                adapters=config["fastp_adapters"],
+                extra=config["fastp_parameters"],
+            threads: 8
+            wrapper:
+                "v2.2.1/bio/fastp"
+
+        # Trim ends after removing adapters # Added in _MTC version
+        rule fastp_hardclip:
+            input:
+                sample=[
+                        "results/trimnoclip/{sample}.1.fastq",
+                        "results/trimnoclip/{sample}.2.fastq",
+                    ]
+            output:
+                trimmed=temp([
+                        "results/trimmed/{sample}.1.fastq",
+                        "results/trimmed/{sample}.2.fastq",
+                    ]
+                ),
+                # Unpaired reads separately
+                unpaired1=temp("results/trimmed/{sample}.u1.fastq"),
+                unpaired2=temp("results/trimmed/{sample}.u2.fastq"),
+                failed=temp("results/trimmed/{sample}.failed.fastq"),
+                html="results/reports/{sample}.html",
+                json="results/reports/{sample}.json",
+            log:
+                "logs/fastp/{sample}.log",
+            params:
+                extra=config["fastp_hardclip_parameters"],
+            threads: 8
+            wrapper:
+                "v2.2.1/bio/fastp"
+    else:
+        # fastp first step only
+                # Trim with fastp
+        rule fastp:
+            input:
+                sample=get_input_fastqs,
+            output:
+                trimmed=temp([
+                        "results/trimmed/{sample}.1.fastq",
+                        "results/trimmed/{sample}.2.fastq",
+                    ]
+                ),
+                # Unpaired reads separately
+                unpaired1=temp("results/trimmed/{sample}.u1.fastq"),
+                unpaired2=temp("results/trimmed/{sample}.u2.fastq"),
+                failed=temp("results/trimmed/{sample}.failed.fastq"),
+                html="results/reports/{sample}.html",
+                json="results/reports/{sample}.json",
+            log:
+                "logs/fastp/{sample}.log",
+            params:
+                adapters=config["fastp_adapters"],
+                extra=config["fastp_parameters"],
+            threads: 8
+            wrapper:
+                "v2.2.1/bio/fastp" 
+
+
+
+
+
 
 else:
 

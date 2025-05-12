@@ -144,29 +144,55 @@ rule genome_index:
 ## TO-DO
 # 1) Allow users to provide custom SNP file
 # Identify SNPs to be accounted for when counting mutations
-rule call_snps:
-    input:
-        str(config["genome"]),
-        get_index_name(),
-        expand("results/sf_reads/{ctl}.s.bam", ctl=CTL_NAMES),
-    params:
-        nctl=nctl,
-        shellscript=workflow.source_path("../scripts/bam2bakR/call_snps.sh"),
-        call_params=config.get("bcftools_call_params", ""),
-        mpileup_params=config.get("bcftools_mpileup_params", ""),
-    output:
-        "results/snps/snp.txt",
-        "results/snps/snp.vcf",
-    log:
-        "logs/call_snps/ctl_samps.log",
-    threads: 20
-    conda:
-        "../envs/full.yaml"
-    shell:
-        """
-        chmod +x {params.shellscript}
-        {params.shellscript} {threads} {params.nctl} {output} "{params.mpileup_params}" "{params.call_params}" {input} 1> {log} 2>&1
-        """
+if config["snp_strategy"] == "genome_likelihoods":
+    rule call_snps:
+        input:
+            str(config["genome"]),
+            get_index_name(),
+            expand("results/sf_reads/{ctl}.s.bam", ctl=CTL_NAMES),
+        params:
+            nctl=nctl,
+            shellscript=workflow.source_path("../scripts/bam2bakR/call_snps.sh"),
+            call_params=config.get("bcftools_call_params", ""),
+            mpileup_params=config.get("bcftools_mpileup_params", ""),
+        output:
+            "results/snps/snp.txt",
+            "results/snps/snp.vcf",
+        log:
+            "logs/call_snps/ctl_samps.log",
+        threads: 20
+        conda:
+            "../envs/full.yaml"
+        shell:
+            """
+            chmod +x {params.shellscript}
+            {params.shellscript} {threads} {params.nctl} {output} "{params.mpileup_params}" "{params.call_params}" {input} 1> {log} 2>&1
+            """
+            
+else:
+    rule call_snps:
+        input:
+            str(config["genome"]),
+            get_index_name(),
+            expand("results/sf_reads/{ctl}.s.bam", ctl=CTL_NAMES),
+        params:
+            nctl=nctl,
+            shellscript=workflow.source_path("../scripts/bam2bakR/call_snps_bycounts.sh"),
+            mincounts=config["snp_threshold"]
+        output:
+            "results/snps/snp.txt",
+            "results/snps/snp.vcf",
+        log:
+            "logs/call_snps/ctl_samps.log",
+        threads: 20
+        conda:
+            "../envs/full.yaml"
+        shell:
+            """
+            chmod +x {params.shellscript}
+            {params.shellscript} {threads} {params.nctl} {output} {params.mincounts} {input} 1> {log} 2>&1
+            """
+
 
 
 # TO-DO:

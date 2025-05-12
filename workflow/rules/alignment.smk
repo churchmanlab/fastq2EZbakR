@@ -55,14 +55,14 @@ if config["aligner"] == "star":
                 fq2=get_fastq_r2,
                 index=config["indices"],
             output:
-                aln="results/align/{sample}.bam",
-                sj="results/align/{sample}-SJ.out.tab",
-                log="results/align/{sample}-Log.out",
+                aln="results/alfullbam/{sample}.bam",
+                sj="results/alfullbam/{sample}-SJ.out.tab",
+                log="results/alfullbam/{sample}-Log.out",
                 log_progress="results/align/{sample}-Log.progress.out",
                 log_final="results/align/{sample}-Log.final.out",
-                aln_tx="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+                aln_tx="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
             log:
-                "logs/align/{sample}_star.log",
+                "logs/alfullbam/{sample}_star.log",
             params:
                 reads_per_gene=lambda wc: "GeneCounts" in config["star_align_params"],
                 chim_junc=lambda wc: "--chimOutType Junctions"
@@ -84,12 +84,12 @@ if config["aligner"] == "star":
                 fq1=get_fastq_r1,
                 index=config["indices"],
             output:
-                aln="results/align/{sample}.bam",
-                sj="results/align/{sample}-SJ.out.tab",
-                log="results/align/{sample}-Log.out",
-                log_progress="results/align/{sample}-Log.progress.out",
-                log_final="results/align/{sample}-Log.final.out",
-                aln_tx="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+                aln="results/alfullbam/{sample}.bam",
+                sj="results/alfullbam/{sample}-SJ.out.tab",
+                log="results/alfullbam/{sample}-Log.out",
+                log_progress="results/alfullbam/{sample}-Log.progress.out",
+                log_final="results/alfullbam/{sample}-Log.final.out",
+                aln_tx="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
             log:
                 "logs/align/{sample}_star.log",
             params:
@@ -105,7 +105,6 @@ if config["aligner"] == "star":
             threads: 24
             script:
                 "../scripts/alignment/star-align.py"
-
 
 ######################################################################################
 ##### ALIGNMENT WITH HISAT2
@@ -192,7 +191,7 @@ if config["aligner"] == "hisat2":
             reads=get_hisat2_reads,
             idx=config["indices"],
         output:
-            "results/align/{sample}.bam",
+            "results/alfullbam/{sample}.bam",
         log:
             "logs/align/{sample}_hisat2.log",
         params:
@@ -200,3 +199,34 @@ if config["aligner"] == "hisat2":
         threads: 20
         wrapper:
             "v2.6.0/bio/hisat2/align"
+            
+if config["modify_bam"] == "no":
+    rule rename_file:
+        input:
+            "results/alfullbam/{sample}.bam"
+        output:
+            "results/align/{sample}.bam"
+        shell:
+            "mv {input} {output}"
+      
+            
+######################################################################################
+##### REMOVE READ SETS FROM MAIN .bam OUTPUT # Added in _MTC 
+######################################################################################
+
+
+if config["modify_bam"] == "yes":
+    rule modify_bam:
+        input: 
+            bam="results/alfullbam/{sample}.bam",
+            bed=config["path_to_removal_bed"]
+        output: 
+            bam="results/align/{sample}.bam"
+        log:
+            "logs/align/{sample}_modifybam.log"
+        conda:
+            "../envs/full.yaml"
+        shell:
+            """
+            samtools view -h -L {input.bed} -U {output.bam} {input.bam} > /dev/null
+            """
