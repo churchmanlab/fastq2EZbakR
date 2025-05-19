@@ -104,7 +104,7 @@ strandedness: "reverse"
   # Options are:
     # 1) genome_likelihoods
     # 2) counts_in_control
-  # snp_counts is the minimum number of mismatches in the control for the position to be marked as a snp
+  # snp_threshold is the minimum number of mismatches in the control for the position to be marked as a snp
 snp_strategy: "counts_in_control"
 snp_threshold: 3
 
