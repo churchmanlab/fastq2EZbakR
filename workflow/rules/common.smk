@@ -953,7 +953,7 @@ MULTIQC_INPUT = expand(
 
 if config.get("aligner") == "star":
     MULTIQC_INPUT.append(
-        expand("results/align/{sample}-Log.final.out", sample=SAMP_NAMES)
+        expand("results/alfullbam/{sample}-Log.final.out", sample=SAMP_NAMES)
     )
 
 

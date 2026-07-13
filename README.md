@@ -4,6 +4,8 @@ fastq2EZbakR is a Snakemake pipeline designed to process nucleotide recoding RNA
 
 **Documentation can be found here: [https://fastq2ezbakr.readthedocs.io/en/latest/](https://fastq2ezbakr.readthedocs.io/en/latest/)**
 
+> **This is a customized fork (`_MTC2`).** For the list of changes relative to upstream fastq2EZbakR, see [MTC_CHANGES.md](MTC_CHANGES.md).
+
 ### Want to learn more about how to interpret and analyze NR-seq data?
 
 Check out some of the blogs I have written on the topic:

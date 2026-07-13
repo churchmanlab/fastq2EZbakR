@@ -1,5 +1,6 @@
 *
 !.gitignore
+!MTC_CHANGES.md
 !docs
 !config
 !workflow

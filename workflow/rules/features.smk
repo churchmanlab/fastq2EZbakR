@@ -113,7 +113,7 @@ else:
     # TO-DO: No reason this can't be split up and multi-threaded
     rule read_to_transcripts:
         input:
-            bam="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+            bam="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
         output:
             table=temp("results/read_to_transcripts/{sample}.csv"),
         log:

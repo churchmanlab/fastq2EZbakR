@@ -59,14 +59,15 @@ cU = {}
 firstReadName = ''
 muts = {'TA': 0, 'CA': 0, 'GA': 0, 'NA': 0, 'AT': 0, 'CT': 0, 'GT': 0, 'NT': 0, 'AC': 0, 'TC': 0, 'GC': 0, 'NC': 0, 'AG': 0, 'TG': 0, 'CG': 0, 'NG': 0, 'AN': 0, 'TN': 0, 'CN': 0, 'GN': 0, 'NN': 0}
 DNAcode={'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C', 'N': 'N', 'a': 't', 'c': 'g', 't': 'a', 'g': 'c', 'n': 'n'}  # DNA code for comp and revcomp transformation
-header = ['qname', 'nA', 'nC', 'nT', 'nG', 'rname', 'FR', 'sj', 'TA', 'CA', 'GA', 'NA', 'AT', 'CT', 'GT', 'NT', 'AC', 'TC', 'GC', 'NC', 'AG', 'TG', 'CG', 'NG', 'AN', 'TN', 'CN', 'GN', 'NN']
+# 'RE', 'cellbc' and 'umi' carry over 10X single-cell tags into the cB # Added in _MTC (umi added for 10X)
+header = ['qname', 'nA', 'nC', 'nT', 'nG', 'rname', 'FR', 'sj', 'RE', 'cellbc', 'umi', 'TA', 'CA', 'GA', 'NA', 'AT', 'CT', 'GT', 'NT', 'AC', 'TC', 'GC', 'NC', 'AG', 'TG', 'CG', 'NG', 'AN', 'TN', 'CN', 'GN', 'NN']
 
 # For counting mutations at individual positions
 if args.mutPos:
     header.extend(['gmutloc', 'tp'])
 
 
-r_info = [''] + 4*[0] + 3*['']
+r_info = [''] + 4*[0] + 6*['']  # 3 extra slots (8=RE, 9=cellbc, 10=umi) for single-cell tags # Added in _MTC
 dovetail = []
 MDstore = {}
 
@@ -113,13 +114,22 @@ wr.writerow(header)
 # Set .bam file for reading
 samfile = pysam.AlignmentFile(args.bam, 'rb')
 
+# Helper to pull a single-cell tag off a read, falling back to a placeholder
+# when the tag is absent (e.g. bulk data where cellranger/STARsolo tags don't exist). # Added in _MTC
+get_tag = pysam.AlignedSegment.get_tag  # Local binding for speed
+def get_tag_or(read, tag, default):
+    try:
+        return get_tag(read, tag)
+    except KeyError:
+        return default
+
 print('Start: ' + str(datetime.datetime.now()))
 for r in samfile:
 
     # Initialize + acquire info: First read only
     if firstReadName != r.query_name:
         muts={'TA': 0, 'CA': 0, 'GA': 0, 'NA': 0, 'AT': 0, 'CT': 0, 'GT': 0, 'NT': 0, 'AC': 0, 'TC': 0, 'GC': 0, 'NC': 0, 'AG': 0, 'TG': 0, 'CG': 0, 'NG': 0, 'AN': 0, 'TN': 0, 'CN': 0, 'GN': 0, 'NN': 0}
-        r_info = [''] + 4*[0] + 3*['']
+        r_info = [''] + 4*[0] + 6*['']  # 3 extra slots (8=RE, 9=cellbc, 10=umi) for single-cell tags # Added in _MTC
         dovetail = []
         MDstore = {}
         gmutloc = []
@@ -128,6 +138,13 @@ for r in samfile:
         r_info[0] = r.query_name            # Read name
         r_info[5] = r.reference_name        # Chromosome name
 
+
+    # Carry over 10X single-cell tags (present in cellranger/STARsolo BAMs). # Added in _MTC
+    # Updated for every record (both mates) since the values are read-level.
+    # Bulk BAMs lack these tags, so a placeholder is stored instead.
+    r_info[8]  = get_tag_or(r, "RE", "-")            # region: E(xonic)/N(intronic)/I(ntergenic)
+    r_info[9]  = get_tag_or(r, "CB", "NO_BARCODE")   # corrected cell barcode
+    r_info[10] = get_tag_or(r, "UB", "NO_UMI")       # corrected UMI
 
     # Gather alignmet information + Resolve dovetailing: Both reads
     if ('I' not in r.cigarstring) and ('D' not in r.cigarstring):       # Any read without insertions/deletions
@@ -163,7 +180,7 @@ for r in samfile:
                 MD = {z[0][0]: [z[0][1], z[1], z[2], z[0][2]] for z in zip(MD, r.query_alignment_sequence, r.query_alignment_qualities)}
 
                 # MDstore.update({ pos:data for pos, data in MD.items() if pos in dovetail and MDstore[pos][2] < data[2] })   # Replace dovetail positions if better quality
-                MDstore.update({ pos:data for pos, data in MD.items() if pos in dovetail and ((MDstore[pos][2] < data[2] and MDstore[pos][0].islower() and data[0].islower()) or (MDstore[pos][2] < data[2] and MDstore[pos][0].isupper() and data[0].isupper()) or (MDstore[pos][2] < data[2] and MDstore[pos][0].islower() and data[0].isupper() and MDstore[pos][2] + 33 <= args.minQual) or (data[0].islower() and MDstore[pos][0].isupper() and data[2] + 33 > args.minQual)) })
+                MDstore.update({ pos:data for pos, data in MD.items() if pos in dovetail and ((MDstore[pos][2] < data[2] and MDstore[pos][0].islower() and data[0].islower()) or (MDstore[pos][2] < data[2] and MDstore[pos][0].isupper() and data[0].isupper()) or (MDstore[pos][2] < data[2] and MDstore[pos][0].islower() and data[0].isupper() and MDstore[pos][2] < args.minQual) or (data[0].islower() and MDstore[pos][0].isupper() and data[2] >= args.minQual)) }) # minQual is a direct Phred score (no +33 ASCII offset) # Added in _MTC
                 # This is a hack to simulate TimeLapse.R behaviour, but does not necessarily mean that it is a correct dovetail mutations handling
                 # For dovetail bases: 1) If there is no mutation in 1st and in 2nd read => replace with higher quality 2nd read
                 #                     2) If there is mutation in 1st and in 2nd read => replace with higher quality 2nd read
@@ -177,7 +194,7 @@ for r in samfile:
 
     # Collect data: Second read only or if in SE mode
     if (args.reads == 'SE' or firstReadName == r.query_name) and len(MDstore) > 0:
-        refseq = [x[0].upper() for x in MDstore.values() if x[2] + 33 > args.minQual]  # Get reference sequence for readpair keeping only bases with given qaulity (Note: I think this should be also filtered for closeness to read end and presence of SNPs)
+        refseq = [x[0].upper() for x in MDstore.values() if x[2] >= args.minQual]  # Get reference sequence for readpair keeping only bases with given qaulity (minQual is a direct Phred score) # Added in _MTC (Note: I think this should be also filtered for closeness to read end and presence of SNPs)
         # Count bases in reference sequence (soft clipped, dovetail-free)
         r_info[1] = refseq.count('A')       # nA
         r_info[2] = refseq.count('C')       # nC
@@ -201,7 +218,7 @@ for r in samfile:
 
             # cU.rds trial data
             if args.mutPos:
-                if (b[0].upper() in args.base) and (b[2] + 33 > args.minQual):
+                if (b[0].upper() in args.base) and (b[2] >= args.minQual):   # minQual is a direct Phred score # Added in _MTC (kept quality filter for consistency with counts denominator)
                     whichMut = [mut for mut in args.mutType if mut[0] == b[0].upper()]     # Find out which mutation types use this reference base e.g. T -> TC, TG, TA, TN
                     for mt in whichMut:
                         key = r.reference_name + ':' + str(pos) + ':' + mt
@@ -211,7 +228,7 @@ for r in samfile:
                             cU[key][0] += 1
 
             # _counts.rds data
-            if b[0].islower() and (b[2] + 33 > args.minQual) and (b[3] + 33 > args.minDist) and (r.reference_name + ':' + str(pos + 1) not in snp):   # Find mutations marked as lowercase letters; apply quality filter; apply distance to read end filter; position is not a SNP
+            if b[0].islower() and (b[2] >= args.minQual) and (b[3] > args.minDist) and (r.reference_name + ':' + str(pos + 1) not in snp):   # Find mutations marked as lowercase letters; apply quality filter (minQual is a direct Phred score); apply distance to read end filter; position is not a SNP # Added in _MTC
                 muts[b[0].upper() + b[1]] += 1                                            # Increment the mutation counter for current readpair
 
                 # mutPos bedGraph data + cU.rds n data

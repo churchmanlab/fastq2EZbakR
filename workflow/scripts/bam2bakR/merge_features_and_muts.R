@@ -354,7 +354,7 @@ if(length(join_fragments) == 0){
   dbExecute(con, glue("
   CREATE OR REPLACE TABLE cB AS
     SELECT '{opt$sample}'      AS sample,
-            rname, sj,
+            rname, sj, RE, cellbc, umi,
             {paste(sel_cols, collapse = ',')},
             COUNT(*)            AS n
     FROM   merged
@@ -366,7 +366,7 @@ if(length(join_fragments) == 0){
   dbExecute(con, glue("
   CREATE OR REPLACE TABLE cB AS
     SELECT '{opt$sample}'      AS sample,
-            rname, sj, {paste(feature_cols, collapse = ',')},
+            rname, sj, RE, cellbc, umi, {paste(feature_cols, collapse = ',')},
             {paste(sel_cols, collapse = ',')},
             COUNT(*)            AS n
     FROM   merged
@@ -420,7 +420,7 @@ if(opt$makeArrow){
 
 if(opt$makecUP){
   
-  group_cols        <- c("rname", feature_cols, mut_cols)   # columns to GROUP BY
+  group_cols        <- c("rname", "RE", "cellbc", "umi", feature_cols, mut_cols)   # columns to GROUP BY (RE/cellbc/umi added in _MTC)
   group_by_clause   <- paste(group_cols, collapse = ", ")
   
   avg_fragments     <- paste(sprintf("AVG(%s) AS %s", base_cols, base_cols),

@@ -55,22 +55,22 @@ if config["aligner"] == "star":
                 fq2=get_fastq_r2,
                 index=config["indices"],
             output:
-                aln="results/align/{sample}.bam",
-                sj="results/align/{sample}-SJ.out.tab",
-                log="results/align/{sample}-Log.out",
-                log_progress="results/align/{sample}-Log.progress.out",
-                log_final="results/align/{sample}-Log.final.out",
-                aln_tx="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+                aln="results/alfullbam/{sample}.bam",
+                sj="results/alfullbam/{sample}-SJ.out.tab",
+                log="results/alfullbam/{sample}-Log.out",
+                log_progress="results/alfullbam/{sample}-Log.progress.out",
+                log_final="results/alfullbam/{sample}-Log.final.out",
+                aln_tx="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
             log:
-                "logs/align/{sample}_star.log",
+                "logs/alfullbam/{sample}_star.log",
             params:
                 reads_per_gene=lambda wc: "GeneCounts" in config["star_align_params"],
                 chim_junc=lambda wc: "--chimOutType Junctions"
                 in config["star_align_params"],
                 idx=lambda wc, input: input.index,
                 extra=STAR_EXTRA,
-                out_reads_per_gene="results/align/{sample}-ReadsPerGene.out.tab",
-                out_chim_junc="results/align/{sample}-Chimeric.out.junction",
+                out_reads_per_gene="results/alfullbam/{sample}-ReadsPerGene.out.tab",
+                out_chim_junc="results/alfullbam/{sample}-Chimeric.out.junction",
             conda:
                 "../envs/star.yaml"
             threads: 24
@@ -84,22 +84,22 @@ if config["aligner"] == "star":
                 fq1=get_fastq_r1,
                 index=config["indices"],
             output:
-                aln="results/align/{sample}.bam",
-                sj="results/align/{sample}-SJ.out.tab",
-                log="results/align/{sample}-Log.out",
-                log_progress="results/align/{sample}-Log.progress.out",
-                log_final="results/align/{sample}-Log.final.out",
-                aln_tx="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+                aln="results/alfullbam/{sample}.bam",
+                sj="results/alfullbam/{sample}-SJ.out.tab",
+                log="results/alfullbam/{sample}-Log.out",
+                log_progress="results/alfullbam/{sample}-Log.progress.out",
+                log_final="results/alfullbam/{sample}-Log.final.out",
+                aln_tx="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
             log:
-                "logs/align/{sample}_star.log",
+                "logs/alfullbam/{sample}_star.log",
             params:
                 reads_per_gene=lambda wc: "GeneCounts" in config["star_align_params"],
                 chim_junc=lambda wc: "--chimOutType Junctions"
                 in config["star_align_params"],
                 idx=lambda wc, input: input.index,
                 extra=STAR_EXTRA,
-                out_reads_per_gene="results/align/{sample}-ReadsPerGene.out.tab",
-                out_chim_junc="results/align/{sample}-Chimeric.out.junction",
+                out_reads_per_gene="results/alfullbam/{sample}-ReadsPerGene.out.tab",
+                out_chim_junc="results/alfullbam/{sample}-Chimeric.out.junction",
             conda:
                 "../envs/star.yaml"
             threads: 24
@@ -192,11 +192,47 @@ if config["aligner"] == "hisat2":
             reads=get_hisat2_reads,
             idx=config["indices"],
         output:
-            "results/align/{sample}.bam",
+            "results/alfullbam/{sample}.bam",
         log:
-            "logs/align/{sample}_hisat2.log",
+            "logs/alfullbam/{sample}_hisat2.log",
         params:
             extra="{} {}".format(HISAT2_STRANDEDNESS, config["hisat2_align_params"]),
         threads: 20
         wrapper:
             "v2.6.0/bio/hisat2/align"
+
+
+######################################################################################
+##### REMOVE READ SETS FROM MAIN .bam OUTPUT # Added in _MTC
+######################################################################################
+
+# All aligners write their genome .bam to results/alfullbam/. This stage produces the
+# results/align/{sample}.bam that the rest of the pipeline consumes.
+#   modify_bam == "yes" -> drop reads overlapping `path_to_removal_bed` (e.g. mito, PolIII)
+#   modify_bam == "no"  -> pass the .bam through unchanged
+if config.get("modify_bam", "no") == "yes":
+
+    rule modify_bam:
+        input:
+            bam="results/alfullbam/{sample}.bam",
+            bed=config["path_to_removal_bed"],
+        output:
+            bam="results/align/{sample}.bam",
+        log:
+            "logs/align/{sample}_modifybam.log",
+        conda:
+            "../envs/full.yaml"
+        shell:
+            """
+            samtools view -h -L {input.bed} -U {output.bam} {input.bam} > /dev/null 2> {log}
+            """
+
+else:
+
+    rule rename_bam:
+        input:
+            "results/alfullbam/{sample}.bam",
+        output:
+            "results/align/{sample}.bam",
+        shell:
+            "mv {input} {output}"

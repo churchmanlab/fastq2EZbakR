@@ -72,6 +72,16 @@ annotation: data/annotation/genome.gtf
 aligner: "star"
 
 
+# Modify output .bam to remove read sets? (e.g. mito reads, PolIII, etc) # Added in _MTC
+  # Options are:
+    # 1) yes
+    # 2) no
+  # If "yes", reads overlapping the intervals in `path_to_removal_bed` are dropped
+  # from the .bam before it is passed to the rest of the pipeline.
+modify_bam: "no"
+path_to_removal_bed: data/annotation/removal.bed
+
+
 # Path to directory containing indices
   # Indices will be built automatically if not present
   # I would suggest naming this "aligner"_index, though any
@@ -179,8 +189,17 @@ deeptools_params: ""
   #         around 100x smaller), and is still compatible with EZbakR. Downside is the slight information loss that
   #         this compression leads to.
   # arrow = Partitioned database of parquet files, in the format necessary to pass to EZbakR.
-  # 
+  #
   # At least one of these should be set to True.
+  #
+  # NOTE (single-cell tag carry-over): # Added in _MTC
+  #   The cB/cUP/arrow outputs carry three extra per-read columns from the BAM for 10X data:
+  #     cellbc = corrected cell barcode (CB tag; "NO_BARCODE" for bulk data)
+  #     umi    = corrected UMI          (UB tag; "NO_UMI" for bulk data)
+  #     RE     = region exonic/intronic/intergenic (RE tag; "-" for bulk data)
+  #   These are only carried over by the standard (DuckDB) merge path.
+  #   They are NOT added when lowRAM is enabled, so use the default lowRAM (False)
+  #   if you need cellbc/umi/RE in the output.
 final_output:
   cB: True
   cUP: False
@@ -228,11 +247,12 @@ skip_trimming: False
 flat_annotation: "data/annotation/flat.gtf"
 
 
-# Minimum base quality required to call a mutation
-# NOTE: due to a legacy ASCII parsing quirk, the actual Phred score
-# minimum is `minqual` - 33. So if you set `minqual: 62`, the minimum
-# Phred score allowed for counting a base call as a mutation is 30 (`minqual` is a non-inclusive minimum). 
-minqual: 62
+# Minimum base quality required to call a mutation # Changed in _MTC
+# `minqual` is interpreted directly as a Phred quality score (the legacy +33
+# ASCII offset has been removed). The filter is an inclusive minimum, so a base
+# call is counted when its Phred score is >= `minqual`. e.g. minqual: 35 counts
+# base calls with Phred score >= 35.
+minqual: 35
 
 
 # Are you using the Windows subsystem for Linux?
@@ -342,6 +362,17 @@ bcftools_mpileup_params: ""
 
 # Optional parameters to pass to `bcftools call`
 bcftools_call_params: ""
+
+# "SNP" calling # Added in _MTC
+  #  bcftools call only keeps sites where bcftools determines a variant based on genotype likelihoods. If you want every site where at least n reads have a mismatch, you need a more lenient approach
+  # Instead of relying on bcftools call, which applies a genotype-calling model, you can directly extract sites where at least one read shows a mismatch using mpileup and a depth-based filter.
+  # Options are:
+    # 1) genome_likelihoods
+    # 2) counts_in_control
+  # snp_threshold is the minimum number of mismatches in the control for the position to be marked as a snp
+  #   (only used when snp_strategy == "counts_in_control")
+snp_strategy: "counts_in_control"
+snp_threshold: 3
 
 ##### HISAT2 PARAMETERS #####
 

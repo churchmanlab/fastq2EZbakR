@@ -24,7 +24,7 @@ rule RSEM_index:
 # Run RSEM to quantify transcript abundances
 rule RSEM:
     input:
-        bam="results/align/{sample}-Aligned.toTranscriptome.out.bam",
+        bam="results/alfullbam/{sample}-Aligned.toTranscriptome.out.bam",
         reference=multiext(
             "rsem_index/reference",
             ".grp",
