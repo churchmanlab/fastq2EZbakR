@@ -1,6 +1,9 @@
 *
 !.gitignore
 !MTC_CHANGES.md
+!data/
+!data/removal_bed/
+!data/removal_bed/*.bed
 !docs
 !config
 !workflow
