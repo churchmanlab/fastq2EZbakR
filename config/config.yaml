@@ -79,7 +79,7 @@ aligner: "star"
   # If "yes", reads overlapping the intervals in `path_to_removal_bed` are dropped
   # from the .bam before it is passed to the rest of the pipeline.
 modify_bam: "no"
-path_to_removal_bed: data/annotation/removal.bed
+path_to_removal_bed: data/removal_bed/hg38_NUMTs_PolIII_sort.bed
 
 
 # Path to directory containing indices
@@ -213,11 +213,11 @@ final_output:
       # counts T-to-C mutations
     # "TC,GA"
       # counts T-to-C and G-to-A mutations
-mut_tracks: "TC"
+mut_tracks: "TC,CT"
 
 
 ### How much memory can the merge features and muts step use?
-max_merge_mem: "8G"
+max_merge_mem: "50G"
 
 
 ### Track normalization parameters
@@ -238,7 +238,7 @@ use_exons_only: True
 
 # Skip adapter trimming? 
   # If True, will skip fastp step
-skip_trimming: False
+skip_trimming: True
 
 
 # Path to flattened annotation 
@@ -250,9 +250,10 @@ flat_annotation: "data/annotation/flat.gtf"
 # Minimum base quality required to call a mutation # Changed in _MTC
 # `minqual` is interpreted directly as a Phred quality score (the legacy +33
 # ASCII offset has been removed). The filter is an inclusive minimum, so a base
-# call is counted when its Phred score is >= `minqual`. e.g. minqual: 35 counts
-# base calls with Phred score >= 35.
-minqual: 35
+# call is counted when its Phred score is >= `minqual`. e.g. minqual: 36 counts
+# base calls with Phred score >= 36.
+# Ideally should be set to max quality score
+minqual: 36
 
 
 # Are you using the Windows subsystem for Linux?
@@ -271,7 +272,7 @@ make_tracks: True
 # Use RSEM to quantify transcript isoform abundances?
   # Only relevant if aligner = 'star' and fastq files are
   # provided as input
-run_rsem: True
+run_rsem: False
 
 
 
@@ -298,10 +299,10 @@ run_rsem: True
 # nonOverlap parameter to allow some leniency
 
 # Parameters for assignment of reads to genes
-fc_genes_extra: "--nonOverlap 0"
+fc_genes_extra: "--nonOverlap 1 -M"
 
 # Parameters for assignment of reads to exons
-fc_exons_extra: "--nonOverlap 0"
+fc_exons_extra: "--nonOverlap 1 -M"
 
 # Parameters for assignment of reads to exonbins
 fc_exonbins_extra: "-M"
@@ -350,8 +351,9 @@ star_sam_tags: ["NH", "HI", "AS", "NM", "MD", "nM"]
   # --sjdbGTFfile is automatically set to be the provided annotation file
   # --outSAMattributes will also be set and provided the tags specified in `star_sam_tags`, overwriting whatever is set here
   # Finally, --outSAMType will be force set to BAM SortedByCoordinate, overwriting whatever is set here
-  # We suggest turning off soft-clipping to improve assignment of reads to exons
-star_align_params: "--alignEndsType EndToEnd --outFilterType BySJout --outFilterMismatchNmax 20 --outFilterScoreMinOverLread 0.4 --outFilterMatchNminOverLread 0.4"
+  # We suggest turning off soft-clipping to improve assignment of reads to exons 
+  # The above suggestion is reversed in this fork. Hard clipping ends prior to entering pipeline is highly suggested here to remove spurious mismatches caused by random hexamer sequence. Soft clipping is permitted so that alignment parameters can be made more stringent without losing as many reads.
+star_align_params: "--alignEndsType Local --outFilterType BySJout --outFilterMismatchNoverReadLmax 0.02 --outFilterScoreMinOverLread 0.66 --outFilterMatchNminOverLread 0.9"
 
 
 
