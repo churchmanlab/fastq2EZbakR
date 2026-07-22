@@ -15,6 +15,7 @@ Every change is marked in the source with an `Added in _MTC` / `Changed in _MTC`
 
 ## Notes
 
+- **Soft-clipping suggestion is reversed in this fork**  and fc_genes_extra and fc_exons_extra are accordingly changed to --nonOverlap 1
 - **Single-cell carry-over (feature 3)** is only produced by the standard (DuckDB) merge path.
   It is **not** added when `lowRAM: True`, so keep the default `lowRAM: False` if you need
   `cellbc` / `umi` / `RE` in the output. (Also noted inline in `config/config.yaml`.)
@@ -29,6 +30,5 @@ These `_MTC` features were left out of `_MTC2` on purpose:
 
 | Feature | Reason |
 |---------|--------|
-| PCR-duplicate removal (`remove_duplicates_with_UMI`, `removePCRdupsFromBAM_*.py`) | Excluded (bulk UMI handling) |
-| fastp hard-clipping / second trimming pass (`do_hardclipping`, `fastp_hardclip_parameters`) | Excluded (fastp trimming differences) |
-| featureCounts `-M` multi-mapper flag (`fc_genes_extra` / `fc_exons_extra`) | Left at upstream `main`'s `--nonOverlap 0` |
+| PCR-duplicate removal (`remove_duplicates_with_UMI`, `removePCRdupsFromBAM_*.py`) | Excluded (bulk UMI handling) because fraction-new estimates match Timelapse estimates better without UMI handling |
+| fastp hard-clipping / second trimming pass (`do_hardclipping`, `fastp_hardclip_parameters`) | Excluded (fastp trimming differences) because it's more straightforward and flexible to handle trimming prior to entering pipeline |
