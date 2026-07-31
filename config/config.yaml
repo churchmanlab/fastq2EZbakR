@@ -299,7 +299,7 @@ run_rsem: False
 # nonOverlap parameter to allow some leniency
 
 # Parameters for assignment of reads to genes
-fc_genes_extra: "--nonOverlap 1 -M"
+fc_genes_extra: "-M"
 
 # Parameters for assignment of reads to exons
 fc_exons_extra: "--nonOverlap 1 -M"
