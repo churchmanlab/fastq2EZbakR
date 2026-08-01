@@ -183,6 +183,10 @@ else:
             nctl=nctl,
             shellscript=workflow.source_path("../scripts/bam2bakR/call_snps_bycounts.sh"),
             mincounts=config.get("snp_threshold", 3),
+            # Use the same base-quality cutoff as mutation counting (cnt_muts) so the # Added in _MTC
+            # SNP mask is built from the same bases mut_call.py would count. minqual is a
+            # direct Phred score in this fork, which maps straight onto bcftools mpileup -Q.
+            minqual=config["minqual"],
         output:
             "results/snps/snp.txt",
             "results/snps/snp.vcf",
@@ -194,7 +198,7 @@ else:
         shell:
             """
             chmod +x {params.shellscript}
-            {params.shellscript} {threads} {params.nctl} {output} {params.mincounts} {input} 1> {log} 2>&1
+            {params.shellscript} {threads} {params.nctl} {output} {params.mincounts} {params.minqual} {input} 1> {log} 2>&1
             """
 
 

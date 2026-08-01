@@ -10,9 +10,10 @@ nsamps=$2
 output_txt=$3
 output_vcf=$4
 snp_counts=$5
-genome_fasta=$6
+minqual=$6          # Added in _MTC: min base quality, matched to cnt_muts (config minqual)
+genome_fasta=$7
 
-shift 7
+shift 8
 
 control_samples=("$@")
 
@@ -44,6 +45,7 @@ then
                          -f "$genome_fasta" \
                          -b ./results/snps/bam.list \
                          -a AD,DP \
+                         -Q "$minqual" \
                          -Ou \
         | bcftools view --threads "$cpus" -i "FORMAT/AD[0:1]>=$snp_counts" -o ./results/snps/Min${snp_counts}_sites.vcf
 
