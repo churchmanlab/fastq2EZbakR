@@ -302,7 +302,7 @@ run_rsem: False
 fc_genes_extra: "-M"
 
 # Parameters for assignment of reads to exons
-fc_exons_extra: "--nonOverlap 1 -M"
+fc_exons_extra: "-M"
 
 # Parameters for assignment of reads to exonbins
 fc_exonbins_extra: "-M"
