@@ -10,10 +10,9 @@ nsamps=$2
 output_txt=$3
 output_vcf=$4
 snp_counts=$5
-minqual=$6          # Added in _MTC: min base quality, matched to cnt_muts (config minqual)
-genome_fasta=$7
+genome_fasta=$6
 
-shift 8
+shift 7
 
 control_samples=("$@")
 
@@ -41,11 +40,16 @@ then
 
         echo "${bam_list[@]}" | tr ' ' '\n' > ./results/snps/bam.list
 
+        # --full-BAQ reproduces the SNP-calling behavior of the old bcftools 1.12 env. # Added in _MTC
+        # From bcftools 1.13 on, mpileup applies BAQ only in problematic regions by
+        # default; 1.12 ran full BAQ on all reads. Restoring full BAQ downweights more
+        # alignment-artifact mismatches, matching the smaller SNP set the 1.12 env produced.
+        # (-Q/-q are left at their defaults of 13/0, which are unchanged across versions.)
         bcftools mpileup --threads "$cpus" \
                          -f "$genome_fasta" \
                          -b ./results/snps/bam.list \
                          -a AD,DP \
-                         -Q "$minqual" \
+                         --full-BAQ \
                          -Ou \
         | bcftools view --threads "$cpus" -i "FORMAT/AD[0:1]>=$snp_counts" -o ./results/snps/Min${snp_counts}_sites.vcf
 
