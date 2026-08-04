@@ -40,16 +40,19 @@ then
 
         echo "${bam_list[@]}" | tr ' ' '\n' > ./results/snps/bam.list
 
-        # --full-BAQ reproduces the SNP-calling behavior of the old bcftools 1.12 env. # Added in _MTC
-        # From bcftools 1.13 on, mpileup applies BAQ only in problematic regions by
-        # default; 1.12 ran full BAQ on all reads. Restoring full BAQ downweights more
-        # alignment-artifact mismatches, matching the smaller SNP set the 1.12 env produced.
-        # (-Q/-q are left at their defaults of 13/0, which are unchanged across versions.)
+        # -X 1.12 reproduces the SNP-calling behavior of the old bcftools 1.12 env. # Added in _MTC
+        # The bcftools 1.13 release rewrote BAQ: it made BAQ partial/on-demand by
+        # default AND changed the BAQ parametrization, so the newer default counts many
+        # more alignment-artifact mismatches (~2x the SNPs). --full-BAQ alone is NOT
+        # enough -- it only restores full-BAQ *scope* while keeping the new BAQ math.
+        # The built-in "1.12" profile is the officially supported way to get the old
+        # behavior back: it sets min_baseQ=13, tandemQ=100, min_frac=0.002, min_support=1,
+        # and switches BAQ from partial (MPLP_REALN_PARTIAL) to full old-style (MPLP_REALN).
         bcftools mpileup --threads "$cpus" \
+                         -X 1.12 \
                          -f "$genome_fasta" \
                          -b ./results/snps/bam.list \
                          -a AD,DP \
-                         --full-BAQ \
                          -Ou \
         | bcftools view --threads "$cpus" -i "FORMAT/AD[0:1]>=$snp_counts" -o ./results/snps/Min${snp_counts}_sites.vcf
 
